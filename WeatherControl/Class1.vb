@@ -12,7 +12,8 @@ Namespace CheatersToggles
     Public Class CheatersToggles
         Inherits DiskResource
 
-        Dim TimePause As Boolean = True 'When True, Time Passes
+        Dim TimePause As Boolean = False 'When True, Time Passes
+        Dim StopTimeValue As Integer = 0
         Dim GameLoaded As Boolean = False 'Lets not do anything until a Save is loaded.
 
         Dim Settings As New Settings
@@ -23,6 +24,7 @@ Namespace CheatersToggles
         Public Sub LoadConfigEvent([Event] As PostGameLoadedEvent)
             GameLoaded = True                       'We don't want to run any cheats outside of the main game (on the main menu)
             WriteLog("Game Loaded, Mod Enabled.")   'No idea if it has side effects, but better safe than sorry imo.
+            StopTimeValue = [Event].Root.TimeOfDay
         End Sub
 
         <Subscribe>
@@ -53,9 +55,11 @@ Namespace CheatersToggles
         End Sub
 
         <Subscribe>
-        Public Sub StopTime([Event] As ShouldTimePassEvent)
+        Public Sub StopTime([Event] As Pre10MinuteClockUpdateEvent)
             If GameLoaded = True Then
-                [Event].ReturnValue = TimePause
+                '[Event].ReturnValue = TimePause
+                [Event].ReturnEarly = TimePause
+                'WriteLog(TimePause)
             End If
         End Sub
 
@@ -85,6 +89,10 @@ Namespace CheatersToggles
                     WriteLog(ex.ToString)
                 End Try
             End If
+            If GameLoaded = True And TimePause = True Then
+                'WriteLog("Setting Back Time")
+                [Event].Root.TimeOfDay = StopTimeValue
+            End If
         End Sub
 
         <Subscribe>
@@ -96,10 +104,11 @@ Namespace CheatersToggles
                     If [Event].Key = Settings.Timepause.ToggleKey Then
                         If TimePause = True Then
                             TimePause = False
-                            WriteLog("Pausing time...")
+                            WriteLog("Unpausing time...")
                         Else
                             TimePause = True
-                            WriteLog("Unpausing time...")
+                            WriteLog("Pausing time...")
+                            StopTimeValue = [Event].Root.TimeOfDay
                         End If
                     End If
                 End If
